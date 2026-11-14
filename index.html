@@ -285,7 +285,7 @@ function render(){
   if(state.phase==="intro"){
     el.innerHTML=`<div class="card">
       <span class="tag amber">Briefing</span>
-      <h2>${N()} Stationen${ROUTE.letters?`, ${ROUTE.letters} Buchstaben`:""}, ein langer Abend.</h2>
+      <h2>Schnitzel, Bars, dann die Clubs.</h2>
       <p>An jedem Cache wartet eine Mission${ROUTE.letters?" und dafür ein Buchstabe":""}. Danach schaltet ein Rätsel die Koordinaten des nächsten Caches frei. Wohin es geht, erfahrt ihr erst, wenn ihr dort steht.</p>
       ${ROUTE.letters?`<p>Wer am Ende das ganze Lösungswort hat, nennt es am Ziel.</p>`:""}
       <p class="note">Treffpunkt: ${esc(s.name)}${s.area?", "+esc(s.area):""}. Ein Handy pro Team führt das Spiel, der Fortschritt bleibt auf diesem Gerät.</p>
@@ -311,7 +311,7 @@ function render(){
       <span class="tag amber">Ziel erreicht</span>
       <h2>${state.got.length?"Das Lösungswort":"Geschafft!"}</h2>
       ${state.got.length?`<div class="final-word">${state.got.map(c=>`<div class="tile got">${esc(c)}</div>`).join("")}</div>`:""}
-      <p>${state.got.length?"Nennt das Wort am Tisch. ":""}Alles Gute zum Geburtstag!</p>
+      <p>${state.got.length?"Nennt das Wort am Tisch. ":""}Alles Gute zum Geburtstag! Ab jetzt ist die Nacht frei, die Club-Karte unten rechts zeigt euch alle Clubs.</p>
       ${s.info?`<p class="note">${esc(s.info)}</p>`:""}</div>`;
   }
 }
