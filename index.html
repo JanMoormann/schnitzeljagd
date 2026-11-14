@@ -170,7 +170,6 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
   <div class="mapfoot">
     <span class="lg"><span class="dot" style="background:var(--amber)"></span>Club</span>
     <span class="lg"><span class="dot" style="background:var(--ok)"></span>Snack</span>
-    <span class="lg"><span class="dot" style="background:var(--pink)"></span>Euer nächster Cache</span>
     <span class="lg"><span class="dot" style="background:#4da3ff"></span>Ihr</span>
     <span id="locMsg"></span>
   </div>
@@ -541,10 +540,10 @@ function updateCacheMarker(){
   const label=state.stage===0?esc(s.name):"Cache "+(state.stage+1);
   cacheMarker=L.marker([s.lat,s.lng],{icon:pinIcon("cache","★"),zIndexOffset:1000}).addTo(map).bindPopup(`<b>${label}</b><br>Euer nächstes Ziel`);
 }
-function openMap(){
+function openMap(){ if(cacheMarker&&map){map.removeLayer(cacheMarker);cacheMarker=null;}
   const ov=$("#mapOv"); ov.hidden=false; document.body.style.overflow="hidden";
   if(!initMap()){ $("#map").innerHTML=`<div class="card" style="margin:16px"><p>Die Karte konnte nicht geladen werden. Prüft die Internetverbindung und öffnet sie nochmal.</p></div>`; return; }
-  setTimeout(()=>map.invalidateSize(),50); updateCacheMarker(); $("#mapClose").focus();
+  setTimeout(()=>map.invalidateSize(),50); $("#mapClose").focus();
 }
 function closeMap(){ $("#mapOv").hidden=true; document.body.style.overflow="";
   if(mapWatch!==null&&navigator.geolocation){navigator.geolocation.clearWatch(mapWatch);mapWatch=null;} $("#mapBtn").focus(); }
