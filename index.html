@@ -65,6 +65,9 @@ button:disabled{opacity:.6;cursor:wait}
 button:focus-visible,.btn:focus-visible,label.btn:focus-within{outline:3px solid var(--pink);outline-offset:2px}
 .full{width:100%}
 .feedback{font-size:15px;min-height:1.5em}
+.arrive-note{font-size:14px;color:var(--muted);text-align:center;margin-top:-6px}
+.arrive-note.near{color:var(--ok)}
+button.primary:disabled{background:var(--panel-2);color:var(--muted);border:1px dashed var(--line);cursor:not-allowed;opacity:1}
 .feedback.bad,.err{color:var(--bad)} .feedback.ok,.okc{color:var(--ok)}
 .nav{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center}
 @media (max-width:380px){.nav{grid-template-columns:1fr;justify-items:center;text-align:center}}
@@ -412,13 +415,29 @@ function renderNav(i,s){
     </div>
     <button class="secondary" id="compassBtn" type="button" hidden>Kompass einschalten</button>
     <div class="hint" id="geoHelp" hidden></div>
-    <button class="primary full" id="arrived" type="button">Wir sind da</button>
+    <button class="primary full" id="arrived" type="button" disabled>Wir sind da</button>
+    <p class="arrive-note" id="arriveNote">Wird freigeschaltet, sobald ihr höchstens ${NEAR} m entfernt seid. Dafür muss die GPS-Peilung laufen.</p>
+    <div class="skipbox" id="noGpsBox" hidden><button class="ghost" id="noGpsBtn" type="button">Kein GPS? Ankunft ohne Ortung bestätigen</button>
+      <div class="confirm" id="noGpsConfirm" hidden><p>Seid ihr wirklich an der Station? Ohne GPS kann die App das nicht prüfen.</p>
+      <div class="row"><button class="secondary small" id="noGpsYes" type="button">Ja, wir sind da</button><button class="ghost" id="noGpsNo" type="button">Abbrechen</button></div></div></div>
     ${i>0?skipHtml(i):""}</div>`;
   setNeedle(fb);
   $("#gpsBtn").onclick=()=>startGeo(s);
-  $("#arrived").onclick=arrive;
+  $("#arrived").onclick=()=>{ if(!$("#arrived").disabled) arrive(); };
+  $("#noGpsBtn").onclick=()=>{$("#noGpsConfirm").hidden=false;$("#noGpsBtn").hidden=true;};
+  $("#noGpsNo").onclick=()=>{$("#noGpsConfirm").hidden=true;$("#noGpsBtn").hidden=false;};
+  $("#noGpsYes").onclick=arrive;
   showCompassBtn();
   wireSkip(()=>skipNav(i));
+  startGeo(s);
+}
+const NEAR=100;
+function setArrival(d,acc){
+  const b=$("#arrived"), note=$("#arriveNote"); if(!b) return;
+  const ok=d<=NEAR+Math.min(acc||0,75);
+  b.disabled=!ok;
+  note.textContent=ok?"Ihr seid in der Nähe. Bestätigt, sobald ihr vor der Tür steht.":`Noch ${fmtDist(Math.max(0,d-NEAR))} bis zur Freischaltung.`;
+  note.classList.toggle("near",ok);
 }
 let needleRot=0, roseRot=0;
 const nearest=(cur,target)=>{ let d=((target-cur)%360+540)%360-180; return cur+d; };
@@ -439,12 +458,13 @@ function startGeo(s){
   st.textContent="Suche Standort …"; stopGeo();
   geoWatch=navigator.geolocation.watchPosition(p=>{
     const c=p.coords, d=distance(c.latitude,c.longitude,s.lat,s.lng), b=bearing(c.latitude,c.longitude,s.lat,s.lng);
-    $("#dist").textContent=fmtDist(d); setNeedle(b);
+    $("#dist").textContent=fmtDist(d); setNeedle(b); setArrival(d,c.accuracy); const ng=$("#noGpsBox"); if(ng) ng.hidden=true;
     st.textContent=d<60?"Ihr seid fast da! Schaut euch um.":`Richtung ${dirName(b)}${heading===null?" (Norden ist oben)":""}. Genauigkeit ±${Math.round(c.accuracy)} m.`;
     if(d<40){ st.textContent="Cache gefunden!"; stopGeo(); setTimeout(arrive,1200); }
     showCompassBtn();
   },err=>{ if(err.code===3){ st.textContent="Warte auf GPS-Signal …"; return; }
-    st.textContent=err.code===1?"Standort blockiert.":"Kein GPS-Signal. Nutzt den Maps-Link."; if(err.code===1) showGeoHelp(); },
+    st.textContent=err.code===1?"Standort blockiert.":"Kein GPS-Signal. Nutzt den Maps-Link."; if(err.code===1) showGeoHelp();
+    const ng=$("#noGpsBox"); if(ng) ng.hidden=false; const note=$("#arriveNote"); if(note) note.textContent="Ohne GPS lässt sich die Ankunft nicht prüfen."; },
   {enableHighAccuracy:true,maximumAge:5000,timeout:30000});
 }
 const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
