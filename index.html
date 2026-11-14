@@ -1,9 +1,16 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
 <title>Schnitzeljagd durch den Kessel</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
 <style>
-/* Layout: one phone-sized column, a card per step, letter tray on top, route editor below. Deliberately single dark night theme. */
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+/* Layout: one phone-sized column, a card per step, letter tray on top. Deliberately single dark night theme. */
 :root{
   --bg:#17142b; --panel:#221d3d; --panel-2:#2c2650; --line:#3a3365;
   --fg:#f3eefc; --muted:#a79fc9; --amber:#ffb84d; --pink:#ff7ab3; --ok:#6be3a4; --bad:#ff6b6b;
@@ -14,7 +21,7 @@
 }
 *{box-sizing:border-box}
 html,body{background:var(--bg);color:var(--fg)}
-body{font-family:var(--f-body);font-size:16px;line-height:1.5;
+body{font-family:var(--f-body);font-size:16px;line-height:1.5;margin:0;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px;
   background-image:radial-gradient(circle at 15% 0%,rgba(255,122,179,.12),transparent 40%),radial-gradient(circle at 100% 30%,rgba(255,184,77,.08),transparent 45%);
   background-attachment:fixed;min-height:100%}
@@ -44,11 +51,12 @@ p{margin:0}
 .note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 input[type=text],textarea{flex:1;min-width:0;font:inherit;font-size:17px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg)}
-textarea{width:100%;font-family:var(--f-mono);font-size:12px;line-height:1.45;min-height:150px;resize:vertical;white-space:pre;overflow:auto}
+textarea{width:100%;font-family:var(--f-mono);font-size:12px;line-height:1.45;min-height:160px;resize:vertical;white-space:pre;overflow:auto}
 input[type=text]:focus,textarea:focus{outline:none;border-color:var(--amber)}
 .shake{animation:shake .4s}
 @keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
 button,.btn{font:inherit;font-weight:600;font-size:16px;border:0;border-radius:12px;padding:12px 18px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+button:disabled{opacity:.6;cursor:wait}
 .primary{background:var(--amber);color:#2a1a00}
 .secondary{background:var(--panel-2);color:var(--fg);border:1px solid var(--line)}
 .ghost{background:transparent;color:var(--muted);padding:8px 10px;font-weight:500;font-size:14px}
@@ -69,11 +77,11 @@ button:focus-visible,.btn:focus-visible,label.btn:focus-within{outline:3px solid
 .status{font-size:14px;color:var(--muted)}
 .final-word{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
 .final-word .tile{width:42px;height:52px;font-size:28px}
-/* editor */
-.drop{border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+.found{font-family:var(--f-display);font-size:28px;font-weight:700;color:var(--amber);line-height:1.1}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;position:relative}
 .drop.over{border-color:var(--amber);background:rgba(255,184,77,.06)}
 .drop input{position:absolute;width:1px;height:1px;opacity:0}
-.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .list li{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line);font-size:15px}
 .list li:last-child{border-bottom:0}
 .list .num{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
@@ -86,68 +94,22 @@ button:focus-visible,.btn:focus-visible,label.btn:focus-within{outline:3px solid
 .cols th{font-family:var(--f-mono);font-weight:500;color:var(--amber)}
 .msgs{font-size:14px;display:flex;flex-direction:column;gap:4px}
 .confirm{background:var(--panel-2);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
 footer{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;align-items:center}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-</style>
 
+</style>
+</head>
+<body>
 <div class="wrap">
   <header>
-    <span class="eyebrow">Geburtstags-Schnitzeljagd · <span id="routeLabel">Stuttgart</span></span>
-    <h1>Schnitzeljagd durch den Kessel</h1>
+    <span class="eyebrow">Geburtstags-Schnitzeljagd</span>
+    <h1 id="title">Schnitzeljagd durch den Kessel</h1>
     <div class="track" id="track" aria-label="Fortschritt"></div>
   </header>
   <section aria-label="Gesammelte Buchstaben"><div class="tray" id="tray"></div></section>
-  <main id="screen"></main>
-
-  <section class="card" id="editor" hidden aria-label="Route bearbeiten">
-    <div class="row" style="justify-content:space-between"><h2>Route bearbeiten</h2><button class="ghost" id="closeEditor" type="button">Schließen</button></div>
-    <p class="muted">Jede Zeile der CSV ist eine Location, in der Reihenfolge der Tour. Das Rätsel einer Zeile führt zu dieser Location, die erste Zeile ist der Treffpunkt und braucht keins.</p>
-
-    <div class="drop" id="drop">
-      <h3>CSV-Datei hochladen</h3>
-      <p class="muted" style="font-size:14px">Hierher ziehen oder auswählen. Trennzeichen Semikolon oder Komma, UTF-8.</p>
-      <label class="btn secondary small">Datei wählen<input type="file" id="file" accept=".csv,text/csv,text/plain"></label>
-    </div>
-
-    <label for="csv" class="muted" style="font-size:14px">Oder CSV hier einfügen und bearbeiten:</label>
-    <textarea id="csv" spellcheck="false" wrap="off"></textarea>
-    <div class="msgs" id="msgs" role="status"></div>
-    <div class="row">
-      <button class="secondary small" id="checkBtn" type="button">Prüfen</button>
-      <button class="primary small" id="applyBtn" type="button">Route übernehmen</button>
-      <button class="secondary small" id="copyBtn" type="button">CSV kopieren</button>
-      <button class="ghost" id="defaultBtn" type="button">Standard-Route laden</button>
-    </div>
-    <div class="confirm" id="applyConfirm" hidden>
-      <p>Neue Route übernehmen? Der Spielstand auf diesem Gerät startet dann von vorn.</p>
-      <div class="row"><button class="primary small" id="applyYes" type="button">Übernehmen</button><button class="ghost" id="applyNo" type="button">Abbrechen</button></div>
-    </div>
-
-    <h3>Aktuelle Route</h3>
-    <ul class="list" id="routeList"></ul>
-
-    <details>
-      <summary class="muted" style="cursor:pointer">Welche Spalten gibt es?</summary>
-      <div class="cols" style="margin-top:10px"><table>
-        <thead><tr><th>Spalte</th><th>Pflicht</th><th>Inhalt</th></tr></thead>
-        <tbody>
-          <tr><td>name</td><td>ja</td><td>Name der Bar, wird nach dem Rätsel angezeigt</td></tr>
-          <tr><td>bereich</td><td></td><td>Stadtteil oder Straße</td></tr>
-          <tr><td>breitengrad</td><td>ja</td><td>z. B. 48.7735 (Komma geht auch)</td></tr>
-          <tr><td>laengengrad</td><td>ja</td><td>z. B. 9.1769</td></tr>
-          <tr><td>anreise</td><td></td><td>„zu Fuß“ oder „Öffis“, steuert den Maps-Link</td></tr>
-          <tr><td>info</td><td></td><td>Praktische Hinweise: Öffnungszeiten, Barzahlung …</td></tr>
-          <tr><td>mission</td><td></td><td>Aufgabe vor Ort. Leer bei der letzten Zeile heißt: Ziel erreicht.</td></tr>
-          <tr><td>buchstabe</td><td>bei Mission</td><td>Buchstabe für das Lösungswort</td></tr>
-          <tr><td>raetsel</td><td>ab Zeile 2</td><td>Rätsel, das zu dieser Location führt</td></tr>
-          <tr><td>tipp1, tipp2</td><td></td><td>Hinweise, falls das Team feststeckt</td></tr>
-          <tr><td>antworten</td><td>ab Zeile 2</td><td>Erlaubte Antworten, getrennt mit |</td></tr>
-        </tbody></table></div>
-    </details>
-  </section>
-
+  <main id="screen"><div class="card"><p class="muted">Route wird geladen …</p></div></main>
   <footer>
-    <button class="ghost" id="editBtn" type="button">Route bearbeiten</button>
     <button class="ghost" id="resetBtn" type="button">Spiel zurücksetzen</button>
     <span id="resetConfirm" hidden>
       <button class="secondary small" id="resetYes" type="button">Ja, von vorn</button>
@@ -155,19 +117,53 @@ footer{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;align-items:ce
     </span>
   </footer>
 </div>
-
 <script>
-const DEFAULT_CSV = "name;bereich;breitengrad;laengengrad;anreise;info;mission;buchstabe;raetsel;tipp1;tipp2;antworten\nMaulwurf Kneipe und Bar;Vaihingen;48.7298867;9.1139932;zu Fuß;Treffpunkt. Hier zahlt ihr nur bar.;\"Gruppenfoto in Maulwurf-Pose: Hände als Schaufeln, Augen zusammengekniffen. Das Geburtstagskind gräbt vorne.\";S;;;;\nThe Auld Rogue Irish Pub;Vaihingen;48.7298333;9.1056889;zu Fuß;Irish Pub. Gute Grundlage vor der Fahrt in den Kessel.;\"Lernt einen irischen Trinkspruch und ruft ihn alle zusammen: „Sláinte!“ Erst wenn der ganze Tisch mitmacht, zählt es.\";C;\"Grün ist meine Farbe, ein Kleeblatt mein Wappen. Auf Schottisch-Englisch bin ich ein „alter Schurke“. Wie heiße ich?\";Ein Irish Pub, nur ein paar Straßen weiter in Vaihingen.;\"„Alt“ heißt hier „auld“, „Schurke“ heißt „rogue“.\";auld rogue|rogue|the auld rogue\nBruno Café & Bar;Stuttgart-Süd, Marienplatz;48.765911;9.1689291;Öffis;Öffis bis Marienplatz. Lebhafte Bar im Süden.;\"Schwäbisch-Runde: Jeder nennt ein schwäbisches Wort (Muggaseggele, Gsälz, Bäbb …), die anderen raten die Bedeutung.\";H;\"Jetzt geht's runter in den Kessel. Ich bin ein Männername, auf Italienisch bedeute ich „braun“, und ich wohne am Platz der Maria.\";Fahrt mit den Öffis in die Stadt, Ziel ist der Marienplatz.;Fünf Buchstaben, beginnt mit B.;bruno\nBrother Louis;Stuttgart-Süd;48.7635911;9.168615;zu Fuß;Cocktailbar direkt um die Ecke.;\"Erfindet einen Cocktail für das Geburtstagskind: Name, drei Zutaten, ein Werbeslogan. Präsentiert ihn dem Barkeeper.\";N;\"Bruno hat einen Bruder, nur ein paar Schritte weiter. Er spricht Englisch, trägt aber den Namen von achtzehn französischen Königen.\";Bruder auf Englisch …;Der Sonnenkönig hieß so. Louis!;brother louis|louis|bruder louis\nKalsarikännit Bar;Bohnenviertel, Hans-im-Glück-Brunnen;48.7735458;9.1769302;Öffis;Finnische Drinks. Schaut euch die Toilette an.;\"Stellt am Hans-im-Glück-Brunnen das Märchen nach: Gold, Pferd, Kuh, Schwein, Gans, Schleifstein. Ein Foto pro Tausch.\";I;\"Die Finnen haben ein eigenes Wort dafür, allein in Unterhosen zu Hause zu trinken. Genau so heißt eure nächste Bar.\";\"Sie liegt am Brunnen eines Glückspilzes, der Gold gegen ein Schwein tauschte: Hans im Glück.\";\"Beginnt mit „Kalsari…“.\";kalsarikannit|kalsarikaennit|kalsari\nJigger & Spoon;Gymnasiumstraße;48.7773807;9.171984;zu Fuß;Speakeasy im ehemaligen Tresorraum.;\"Flüsterpost: Das Geburtstagskind flüstert einen Wunsch für das neue Lebensjahr. Das letzte Teammitglied sagt laut, was angekommen ist.\";T;\"Ich bin der kleine Messbecher hinter jeder Bar, mein Partner rührt um. Zusammen wohnen wir in einem alten Banktresor.\";\"Ein Speakeasy: klingeln und mit dem Aufzug nach unten.\";Englisch: Messbecher und Löffel.;jigger|jigger & spoon|jigger and spoon\nSchankstelle;Lautenschlagerstraße;48.7852767;9.1774996;zu Fuß;Bar & Club, Donnerstag bis Samstag geöffnet.;\"Tankfoto: Posiert wie an der Zapfsäule. Einer zapft, einer bezahlt, einer wischt die Scheibe.\";Z;\"Hier tankt ihr nicht Benzin, sondern Bier. Mein Name klingt wie eine Tankstelle, nur mit Ausschank.\";Bar und Club im Tankstellen-Look.;Schank + Tankstelle.;schankstelle\nWonders Club;Friedrichstraße;48.7822111;9.1776341;zu Fuß;Freitag und Samstag bis 5 Uhr.;\"Tanzt als ganze Gruppe den nächsten Song durch, egal was läuft. Ein kurzes Video als Beweis.\";L;\"Es gibt sieben davon auf der Welt, und in Stuttgart einen Club mit diesem Namen auf Englisch. Wie heißt er?\";Die sieben Welt…;\"Auf Englisch: „Wunder“.\";wonders|wonders club|wunder\nCarls Brauhaus;Schlossplatz;48.7794633;9.1799805;Öffis;\"Samstags ab 10 Uhr geöffnet. Veganes Schnitzel gibt es auch. Am besten reservieren: +49 711 25974611.\";;;\"Erst schlafen, dann der letzte Hinweis: Im Olga-Bau am Schlossplatz wartet ein Mann mit dem Schnitzel, mit Fleisch oder vegan. Wie heißt er?\";Ein Brauhaus mit dem Namen eines Königs.;Fünf Buchstaben, beginnt mit C.;carl|carls|carls brauhaus\n";
-const KEY="schnitzeljagd-kessel-v2", ROUTE_KEY="schnitzeljagd-route-v2";
-const $=s=>document.querySelector(s);
-const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const norm=s=>String(s).normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/ß/g,"ss").toLowerCase().replace(/[^a-z0-9]/g,"");
-function store(k,v){try{v===null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}
-function read(k){try{return localStorage.getItem(k)}catch(e){return null}}
+/* ---------- shared: answer normalisation + route crypto ---------- */
+const ARTICLES=/^(der|die|das|den|dem|ein|eine|einen|einem|mein|meine|dein|deine|unser|unsere|the|a|an)\s+/i;
+const normText=s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/ß/g,"ss").toLowerCase().replace(/[^a-z0-9]/g,"");
+const normAnswer=s=>normText(String(s??"").trim().replace(ARTICLES,""));
+const _enc=new TextEncoder(), _dec=new TextDecoder();
+const b64=u8=>{let s="";for(let i=0;i<u8.length;i++)s+=String.fromCharCode(u8[i]);return btoa(s);};
+const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function answerKey(answer,salt,idx,iter){
+  const base=await crypto.subtle.importKey("raw",_enc.encode(normAnswer(answer)),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt:_enc.encode(salt+":"+idx),iterations:iter,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+}
+async function seal(key,bytes){const iv=crypto.getRandomValues(new Uint8Array(12));
+  return {iv:b64(iv),ct:b64(new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},key,bytes)))};}
+async function unseal(key,box){try{return new Uint8Array(await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(box.iv)},key,unb64(box.ct)));}catch(e){return null;}}
+const payloadOf=s=>({name:s.name,area:s.area,lat:s.lat,lng:s.lng,travel:s.travel,way:s.way,info:s.info,mission:s.mission,letter:s.letter});
+async function encryptRoute(stops,title){
+  const salt=b64(crypto.getRandomValues(new Uint8Array(16))), iter=150000;
+  const out={v:1,title:title||"Schnitzeljagd",salt,iter,letters:stops.filter(s=>s.mission&&s.letter).length,stops:[]};
+  for(let i=0;i<stops.length;i++){
+    const s=stops[i];
+    if(i===0){ out.stops.push({start:payloadOf(s)}); continue; }
+    const raw=crypto.getRandomValues(new Uint8Array(32));
+    const ck=await crypto.subtle.importKey("raw",raw,"AES-GCM",false,["encrypt"]);
+    const payload=await seal(ck,_enc.encode(JSON.stringify(payloadOf(s))));
+    const variants=[...new Set(s.answers.map(normAnswer).filter(Boolean))];
+    const keys=[];
+    for(const v of variants){ keys.push(await seal(await answerKey(v,salt,i,iter),raw)); }
+    for(let j=keys.length-1;j>0;j--){const k=Math.floor(Math.random()*(j+1));[keys[j],keys[k]]=[keys[k],keys[j]];}
+    out.stops.push({riddle:s.riddle,hints:s.hints,payload,keys});
+  }
+  return out;
+}
+async function tryUnlock(route,idx,answer){
+  if(!normAnswer(answer)) return null;
+  const e=route.stops[idx], k=await answerKey(answer,route.salt,idx,route.iter);
+  for(const box of e.keys){
+    const raw=await unseal(k,box);
+    if(raw){ const ck=await crypto.subtle.importKey("raw",raw,"AES-GCM",false,["decrypt"]);
+      const p=await unseal(ck,e.payload); if(p) return JSON.parse(_dec.decode(p)); }
+  }
+  return null;
+}
 
-/* ---------- CSV ---------- */
+/* ---------- shared: CSV ---------- */
 function parseCSV(text){
-  text=text.replace(/^﻿/,"");
+  text=String(text).replace(/^﻿/,"");
   const first=text.split(/\r?\n/)[0]||"";
   const delim=(first.split(";").length>=first.split(",").length)?";":",";
   const rows=[];let row=[],f="",q=false;
@@ -180,137 +176,123 @@ function parseCSV(text){
     else f+=c;
   }
   if(f!==""||row.length){row.push(f);rows.push(row);}
-  return {rows:rows.filter(r=>r.some(x=>x.trim()!=="")),delim};
+  return rows.filter(r=>r.some(x=>x.trim()!==""));
 }
-const ALIASES={name:["name","location","bar"],area:["bereich","stadtteil","area","adresse"],lat:["breitengrad","lat","latitude","breite"],
-  lng:["laengengrad","längengrad","lng","lon","long","longitude","laenge","länge"],travel:["anreise","travel","weg"],note:["info","notiz","note","hinweis"],
-  mission:["mission","aufgabe"],letter:["buchstabe","letter"],riddle:["raetsel","rätsel","riddle"],hint1:["tipp1","tipp 1","hint1"],hint2:["tipp2","tipp 2","hint2"],
-  answers:["antworten","antwort","answers","loesung","lösung"]};
-function buildRoute(text){
+const ALIASES={name:["name","location","bar"],area:["bereich","stadtteil","area"],lat:["breitengrad","lat","latitude","breite"],
+  lng:["laengengrad","längengrad","lng","lon","longitude","laenge","länge"],travel:["anreise","travel"],way:["weg","wegbeschreibung","anfahrt"],
+  info:["info","notiz","note"],mission:["mission","aufgabe"],letter:["buchstabe","letter"],riddle:["raetsel","rätsel","riddle"],
+  hint1:["tipp1","tipp 1","hint1"],hint2:["tipp2","tipp 2","hint2"],answers:["antworten","antwort","answers","loesung","lösung"]};
+function stopsFromCSV(text){
   const errors=[],warnings=[];
-  const {rows}=parseCSV(text);
+  const rows=parseCSV(text);
   if(rows.length<2) return {errors:["Die CSV braucht eine Kopfzeile und mindestens zwei Locations."],warnings,stops:[]};
-  const head=rows[0].map(h=>h.trim().toLowerCase());
-  const idx={};
-  for(const k in ALIASES){idx[k]=head.findIndex(h=>ALIASES[k].includes(h));}
+  const head=rows[0].map(h=>h.trim().toLowerCase()), idx={};
+  for(const k in ALIASES) idx[k]=head.findIndex(h=>ALIASES[k].includes(h));
   ["name","lat","lng"].forEach(k=>{if(idx[k]<0) errors.push(`Spalte „${ALIASES[k][0]}“ fehlt in der Kopfzeile.`);});
   if(errors.length) return {errors,warnings,stops:[]};
   const get=(r,k)=>idx[k]>=0?(r[idx[k]]||"").trim():"";
   const num=v=>parseFloat(v.replace(",","."));
   const stops=rows.slice(1).map((r,i)=>{
     const z=i+2, s={name:get(r,"name"),area:get(r,"area"),lat:num(get(r,"lat")),lng:num(get(r,"lng")),
-      travel:/öff|oeff|bahn|bus|transit|tram|u-?bahn|s-?bahn/i.test(get(r,"travel"))?"transit":"walking",
-      note:get(r,"note"),mission:get(r,"mission"),letter:get(r,"letter").slice(0,1).toUpperCase(),
+      travel:/öff|oeff|bahn|bus|transit|tram/i.test(get(r,"travel"))?"transit":"walking",way:get(r,"way"),
+      info:get(r,"info"),mission:get(r,"mission"),letter:get(r,"letter").slice(0,1).toUpperCase(),
       riddle:get(r,"riddle"),hints:[get(r,"hint1"),get(r,"hint2")].filter(Boolean),
       answers:get(r,"answers").split("|").map(a=>a.trim()).filter(Boolean)};
     if(!s.name) errors.push(`Zeile ${z}: Name fehlt.`);
     if(!(s.lat>=-90&&s.lat<=90)||!(s.lng>=-180&&s.lng<=180)) errors.push(`Zeile ${z} (${s.name||"?"}): Koordinaten fehlen oder sind ungültig.`);
-    if(i>0&&!s.riddle) errors.push(`Zeile ${z} (${s.name}): Rätsel fehlt. Ohne Rätsel findet das Team die Location nicht.`);
-    if(i>0&&s.riddle&&!s.answers.length){ s.answers=[s.name]; warnings.push(`Zeile ${z}: Keine Antworten angegeben, der Name „${s.name}“ gilt als Antwort.`); }
+    if(i>0&&!s.riddle) errors.push(`Zeile ${z} (${s.name}): Rätsel fehlt. Ohne Rätsel lässt sich der Cache nicht freischalten.`);
+    if(i>0&&s.riddle&&!s.answers.length) errors.push(`Zeile ${z} (${s.name}): Antworten fehlen.`);
     if(s.mission&&!s.letter) warnings.push(`Zeile ${z} (${s.name}): Mission ohne Buchstaben, sie zählt nicht zum Lösungswort.`);
-    if(i===0&&s.riddle) warnings.push(`Zeile 2: Das Rätsel des Treffpunkts wird nicht verwendet.`);
+    if(i>0&&s.answers.some(a=>normText(a).length&&normText(s.name).includes(normAnswer(a))&&normAnswer(a).length>3))
+      warnings.push(`Zeile ${z}: Eine Antwort steckt im Namen der Bar und könnte sie verraten.`);
     return s;
   });
   return {errors,warnings,stops};
 }
-function toCSV(stops){
-  const q=v=>{v=String(v??"");return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
-  const head="name;bereich;breitengrad;laengengrad;anreise;info;mission;buchstabe;raetsel;tipp1;tipp2;antworten";
-  return [head,...stops.map(s=>[s.name,s.area,s.lat,s.lng,s.travel==="transit"?"Öffis":"zu Fuß",s.note,s.mission,s.letter,s.riddle,s.hints[0]||"",s.hints[1]||"",s.answers.join("|")].map(q).join(";"))].join("\n");
-}
 
-/* ---------- route & state ---------- */
-let STOPS=[], routeCSV="", routeSource="default";
-function setRoute(csv,source){
-  const r=buildRoute(csv); if(r.errors.length) return false;
-  STOPS=r.stops; routeCSV=csv; routeSource=source; return true;
-}
-const word=()=>STOPS.filter(s=>s.mission&&s.letter).map(s=>s.letter).join("");
-const sig=csv=>{let h=0;for(let i=0;i<csv.length;i++)h=(h*31+csv.charCodeAt(i))|0;return String(h);};
-const fresh=()=>({stage:0,phase:"intro",hints:0,popped:-1,route:sig(routeCSV)});
-let state;
-function loadState(){ try{state=JSON.parse(read(KEY))}catch(e){state=null}
-  if(!state||state.route!==sig(routeCSV)||state.stage>=STOPS.length) state=fresh(); }
-function save(){store(KEY,JSON.stringify(state));}
+const KEY="schnitzeljagd-spiel-v3";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let ROUTE=null, state=null;
+const N=()=>ROUTE.stops.length;
+const fresh=()=>({salt:ROUTE.salt,stage:0,phase:"intro",hints:0,unlocked:{},got:[],popped:-1});
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+function loadState(){let s=null;try{s=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+  state=(s&&s.salt===ROUTE.salt&&s.stage<N())?s:fresh();}
+const stopAt=i=>i===0?ROUTE.stops[0].start:state.unlocked[i];
 
-function lettersGot(){
-  let n=0; STOPS.forEach((s,i)=>{ if(!(s.mission&&s.letter)) return;
-    if(i<state.stage||state.phase==="final"||(i===state.stage&&state.phase==="riddle")) n++; });
-  return n;
-}
 function renderChrome(){
   const t=$("#track"); t.innerHTML="";
-  STOPS.forEach((s,i)=>{const sp=document.createElement("span");
-    if(i<state.stage||state.phase==="final") sp.className="done"; else if(i===state.stage) sp.className="now";
-    t.appendChild(sp);});
-  const tray=$("#tray"); tray.innerHTML=""; const n=lettersGot(), w=word();
-  [...w].forEach((ch,i)=>{const d=document.createElement("div");d.className="tile"+(i<n?" got":"")+(i===state.popped?" pop":"");
-    d.textContent=i<n?ch:"?"; d.setAttribute("aria-label",i<n?ch:"noch offen"); tray.appendChild(d);});
-  $("#tray").parentElement.hidden=!w.length;
-  $("#routeLabel").textContent=routeSource==="default"?"Stuttgart":"Eigene Route";
-  state.popped=-1;
+  for(let i=0;i<N();i++){const sp=document.createElement("span");
+    if(i<state.stage||state.phase==="final") sp.className="done"; else if(i===state.stage) sp.className="now"; t.appendChild(sp);}
+  const tray=$("#tray"); tray.innerHTML="";
+  for(let i=0;i<ROUTE.letters;i++){const d=document.createElement("div"),g=state.got[i];
+    d.className="tile"+(g?" got":"")+(i===state.popped?" pop":""); d.textContent=g||"?"; d.setAttribute("aria-label",g||"noch offen"); tray.appendChild(d);}
+  tray.parentElement.hidden=!ROUTE.letters; state.popped=-1;
 }
 
 function render(){
   stopGeo(); renderChrome();
-  const s=STOPS[state.stage], el=$("#screen"), last=state.stage===STOPS.length-1;
+  const i=state.stage, s=stopAt(i), last=i===N()-1, el=$("#screen");
   if(state.phase==="intro"){
-    const w=word();
     el.innerHTML=`<div class="card">
       <span class="tag amber">Briefing</span>
-      <h2>${STOPS.length} Stationen${w?`, ${w.length} Buchstaben`:""}, ein Ziel.</h2>
-      <p>An jeder Station erfüllt ihr eine Mission${w?" und bekommt dafür einen Buchstaben":""}. Danach verrät ein Rätsel das nächste Ziel, und der Peiler führt euch hin wie beim Geocaching.</p>
-      ${w?`<p>Wer am Ende das ganze Lösungswort hat, nennt es am Ziel.</p>`:""}
-      <p class="note">Treffpunkt: ${esc(STOPS[0].name)}${STOPS[0].area?", "+esc(STOPS[0].area):""}. Ein Handy pro Team führt das Spiel, der Fortschritt bleibt auf diesem Gerät.</p>
+      <h2>${N()} Caches${ROUTE.letters?`, ${ROUTE.letters} Buchstaben`:""}, ein Ziel.</h2>
+      <p>An jedem Cache wartet eine Mission${ROUTE.letters?" und dafür ein Buchstabe":""}. Danach schaltet ein Rätsel die Koordinaten des nächsten Caches frei. Wohin es geht, erfahrt ihr erst, wenn ihr dort steht.</p>
+      ${ROUTE.letters?`<p>Wer am Ende das ganze Lösungswort hat, nennt es am Ziel.</p>`:""}
+      <p class="note">Treffpunkt: ${esc(s.name)}${s.area?", "+esc(s.area):""}. Ein Handy pro Team führt das Spiel, der Fortschritt bleibt auf diesem Gerät.</p>
       <button class="primary full" id="go" type="button">Zum Treffpunkt</button></div>`;
     $("#go").onclick=()=>{state.phase="nav";save();render();};
   }
-  else if(state.phase==="nav") renderNav(s);
-  else if(state.phase==="mission"){
+  else if(state.phase==="nav") renderNav(i,s);
+  else if(state.phase==="found"){
     el.innerHTML=`<div class="card">
-      <span class="tag">Station ${state.stage+1} · ${esc(s.name)}</span>
-      <h2>Mission</h2>
-      <p class="riddle">${esc(s.mission)}</p>
-      ${s.note?`<p class="note">${esc(s.note)}</p>`:""}
-      <button class="primary full" id="done" type="button">${s.letter?"Mission erfüllt, Buchstabe her":"Mission erfüllt"}</button></div>`;
-    $("#done").onclick=()=>{ if(s.letter) state.popped=lettersGot();
+      <span class="tag amber">Cache ${i+1} gefunden</span>
+      <p class="found">${esc(s.name)}</p>
+      ${s.area?`<p class="muted">${esc(s.area)}</p>`:""}
+      ${s.mission?`<h2>Mission</h2><p class="riddle">${esc(s.mission)}</p>`:""}
+      ${s.info?`<p class="note">${esc(s.info)}</p>`:""}
+      <button class="primary full" id="done" type="button">${s.mission?(s.letter?"Mission erfüllt, Buchstabe her":"Mission erfüllt"):(last?"Zum Ziel":"Weiter zum Rätsel")}</button></div>`;
+    $("#done").onclick=()=>{
+      if(s.mission&&s.letter){state.popped=state.got.length;state.got.push(s.letter);}
       state.phase=last?"final":"riddle"; state.hints=0; save(); render(); };
   }
-  else if(state.phase==="riddle") renderRiddle(STOPS[state.stage+1]);
+  else if(state.phase==="riddle") renderRiddle(i+1);
   else if(state.phase==="final"){
-    const w=word(), z=STOPS[STOPS.length-1];
     el.innerHTML=`<div class="card" style="text-align:center;align-items:center">
       <span class="tag amber">Ziel erreicht</span>
-      <h2>${w?"Das Lösungswort":"Geschafft!"}</h2>
-      ${w?`<div class="final-word">${[...w].map(c=>`<div class="tile got">${esc(c)}</div>`).join("")}</div>`:""}
-      <p>${w?"Nennt das Wort am Tisch. ":""}Alles Gute zum Geburtstag!</p>
-      ${z.note?`<p class="note">${esc(z.note)}</p>`:""}</div>`;
+      <h2>${state.got.length?"Das Lösungswort":"Geschafft!"}</h2>
+      ${state.got.length?`<div class="final-word">${state.got.map(c=>`<div class="tile got">${esc(c)}</div>`).join("")}</div>`:""}
+      <p>${state.got.length?"Nennt das Wort am Tisch. ":""}Alles Gute zum Geburtstag!</p>
+      ${s.info?`<p class="note">${esc(s.info)}</p>`:""}</div>`;
   }
 }
 
-function renderRiddle(next){
-  const el=$("#screen");
-  const hintHtml=next.hints.slice(0,state.hints).map((h,i)=>`<div class="hint"><strong>Hinweis ${i+1}:</strong> ${esc(h)}</div>`).join("");
-  const canHint=state.hints<next.hints.length;
+function renderRiddle(n){
+  const e=ROUTE.stops[n], el=$("#screen");
+  const hintHtml=e.hints.slice(0,state.hints).map((h,k)=>`<div class="hint"><strong>Hinweis ${k+1}:</strong> ${esc(h)}</div>`).join("");
   el.innerHTML=`<div class="card">
-    <span class="tag">Rätsel ${state.stage+1} von ${STOPS.length-1}</span>
-    <p class="riddle">${esc(next.riddle)}</p>
+    <span class="tag">Rätsel für Cache ${n+1}</span>
+    <p class="riddle">${esc(e.riddle)}</p>
     ${hintHtml}
     <form id="f" class="row" autocomplete="off">
-      <input type="text" id="ans" placeholder="Eure Antwort" aria-label="Antwort">
-      <button class="primary" type="submit">Prüfen</button>
+      <input type="text" id="ans" placeholder="Eure Antwort" aria-label="Antwort" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <button class="primary" type="submit" id="chk">Prüfen</button>
     </form>
     <div class="feedback" id="fb" role="status"></div>
-    <div class="row">${canHint?`<button class="secondary" id="hintBtn" type="button">Hinweis nehmen</button>`:`<button class="secondary" id="solveBtn" type="button">Lösung zeigen</button>`}</div></div>`;
-  $("#f").onsubmit=e=>{e.preventDefault();const v=norm($("#ans").value); if(!v) return;
-    const ok=next.answers.some(a=>{const n=norm(a);return n&&(v===n||(n.length>=5&&v.includes(n)));});
-    if(ok){ $("#fb").className="feedback ok"; $("#fb").textContent="Richtig! Der Peiler ist freigeschaltet.";
-      setTimeout(()=>{state.stage++;state.phase="nav";save();render();},900);}
-    else{ $("#fb").className="feedback bad"; $("#fb").textContent="Nicht ganz. Versucht es nochmal.";
-      const i=$("#ans"); i.classList.remove("shake"); void i.offsetWidth; i.classList.add("shake");}
+    ${state.hints<e.hints.length?`<div class="row"><button class="secondary" id="hintBtn" type="button">Hinweis nehmen</button></div>`:""}
+    <p class="note">Die richtige Antwort entschlüsselt die Koordinaten. Raten über die Lösung gibt es nicht, fragt notfalls die Spielleitung.</p></div>`;
+  $("#f").onsubmit=async ev=>{ev.preventDefault();
+    const v=$("#ans").value; if(!v.trim()) return;
+    const b=$("#chk"); b.disabled=true; b.textContent="Prüfe …";
+    let p=null; try{p=await tryUnlock(ROUTE,n,v);}catch(err){}
+    b.disabled=false; b.textContent="Prüfen";
+    if(p){ $("#fb").className="feedback ok"; $("#fb").textContent="Richtig! Die Koordinaten sind entschlüsselt.";
+      state.unlocked[n]=p; setTimeout(()=>{state.stage=n;state.phase="nav";save();render();},900); }
+    else{ $("#fb").className="feedback bad"; $("#fb").textContent="Das öffnet den Cache nicht. Versucht es nochmal.";
+      const inp=$("#ans"); inp.classList.remove("shake"); void inp.offsetWidth; inp.classList.add("shake"); }
   };
-  if(canHint) $("#hintBtn").onclick=()=>{state.hints++;save();renderRiddle(next);};
-  else $("#solveBtn").onclick=()=>{$("#ans").value=next.answers[0];$("#fb").className="feedback";$("#fb").textContent="Die Lösung steht im Feld. Jetzt auf Prüfen tippen.";};
+  const hb=$("#hintBtn"); if(hb) hb.onclick=()=>{state.hints++;save();renderRiddle(n);};
 }
 
 /* ---------- Navigation ---------- */
@@ -326,21 +308,21 @@ const DIRS=["Norden","Nordosten","Osten","Südosten","Süden","Südwesten","West
 const dirName=b=>DIRS[Math.round(b/45)%8];
 const fmtDist=m=>m<1000?Math.round(m/10)*10+" m":(m/1000).toFixed(1).replace(".",",")+" km";
 
-function renderNav(s){
-  const prev=state.stage>0?STOPS[state.stage-1]:null, last=state.stage===STOPS.length-1;
+function renderNav(i,s){
+  const prev=i>0?stopAt(i-1):null;
   const maps=`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=${s.travel}`;
   const fb=prev?bearing(prev.lat,prev.lng,s.lat,s.lng):null, fd=prev?distance(prev.lat,prev.lng,s.lat,s.lng):null;
   $("#screen").innerHTML=`<div class="card">
-    <span class="tag amber">${last?"Letztes Ziel":"Peilung"} · Ziel ${state.stage+1} von ${STOPS.length}</span>
-    <h2>${esc(s.name)}</h2>
-    ${s.area?`<p class="muted">${esc(s.area)}</p>`:""}
+    <span class="tag amber">Peilung · Cache ${i+1} von ${N()}</span>
+    <h2>${i===0?esc(s.name):(i===N()-1?"Das Ziel":"Cache "+(i+1))}</h2>
+    ${i>0&&s.way?`<p>${esc(s.way)}</p>`:""}
     <div class="nav">
       <div class="dial" aria-hidden="true"><span class="n">N</span>
         <div class="needle" id="needle"><svg viewBox="0 0 100 100"><polygon points="50,14 61,54 50,47 39,54" fill="var(--pink)"/><polygon points="50,86 39,54 50,61 61,54" fill="var(--line)"/><circle cx="50" cy="54" r="4" fill="var(--fg)"/></svg></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
         <div class="dist" id="dist">${fd!==null?fmtDist(fd):"–"}</div>
-        <div class="status" id="geoStatus">${prev?`Luftlinie ab ${esc(prev.name)}, Richtung ${dirName(fb)}.`:"Schaltet GPS ein für die Live-Peilung."}</div>
+        <div class="status" id="geoStatus">${prev?`Luftlinie vom letzten Cache, Richtung ${dirName(fb)}.`:"Startet die GPS-Peilung."}</div>
         <div class="coords">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</div>
       </div>
     </div>
@@ -348,15 +330,13 @@ function renderNav(s){
       <button class="secondary" id="gpsBtn" type="button">GPS-Peilung starten</button>
       <a class="btn secondary" href="${maps}" target="_blank" rel="noopener">${s.travel==="transit"?"Öffi-Route":"Fußweg"} in Maps</a>
     </div>
-    ${s.note?`<p class="note">${esc(s.note)}</p>`:""}
     <button class="primary full" id="arrived" type="button">Wir sind da</button></div>`;
   if(fb!==null) setNeedle(fb);
   $("#gpsBtn").onclick=()=>startGeo(s);
   $("#arrived").onclick=arrive;
 }
 function setNeedle(b){const n=$("#needle"); if(!n) return; n.dataset.b=b; n.style.transform=`rotate(${heading!==null?b-heading:b}deg)`;}
-function arrive(){ stopGeo(); const s=STOPS[state.stage], last=state.stage===STOPS.length-1;
-  state.phase=s.mission?"mission":(last?"final":"riddle"); state.hints=0; save(); render(); window.scrollTo({top:0,behavior:"smooth"}); }
+function arrive(){ stopGeo(); state.phase="found"; save(); render(); window.scrollTo({top:0,behavior:"smooth"}); }
 function startGeo(s){
   const st=$("#geoStatus"); enableCompass();
   if(!("geolocation" in navigator)){st.textContent="Kein GPS im Browser. Nutzt den Maps-Link.";return;}
@@ -365,8 +345,8 @@ function startGeo(s){
     const c=p.coords, d=distance(c.latitude,c.longitude,s.lat,s.lng), b=bearing(c.latitude,c.longitude,s.lat,s.lng);
     $("#dist").textContent=fmtDist(d); setNeedle(b);
     st.textContent=d<60?"Ihr seid fast da! Schaut euch um.":`Richtung ${dirName(b)}${heading===null?" (Norden ist oben)":""}. Genauigkeit ±${Math.round(c.accuracy)} m.`;
-    if(d<40){ st.textContent="Angekommen!"; stopGeo(); setTimeout(arrive,1200); }
-  },err=>{ st.textContent=err.code===1?"Standort wurde nicht freigegeben. Nutzt den Maps-Link.":"Kein GPS-Signal. Nutzt den Maps-Link."; },
+    if(d<40){ st.textContent="Cache gefunden!"; stopGeo(); setTimeout(arrive,1200); }
+  },err=>{ st.textContent=err.code===1?"Standort wurde nicht freigegeben. Nutzt den Maps-Link oder erlaubt den Standort in den Browser-Einstellungen.":"Kein GPS-Signal. Nutzt den Maps-Link."; },
   {enableHighAccuracy:true,maximumAge:5000,timeout:20000});
 }
 function onOrient(e){ let h=null;
@@ -377,53 +357,18 @@ function enableCompass(){ if(orientOn) return; orientOn=true;
       DeviceOrientationEvent.requestPermission().then(r=>{if(r==="granted") addEventListener("deviceorientation",onOrient);}).catch(()=>{});
     else{ addEventListener("deviceorientationabsolute",onOrient); addEventListener("deviceorientation",onOrient); } }catch(e){} }
 
-/* ---------- Editor ---------- */
-let pendingCSV=null;
-function showMsgs(r){
-  const m=$("#msgs");
-  if(r.errors.length) m.innerHTML=r.errors.map(e=>`<span class="err">✕ ${esc(e)}</span>`).join("");
-  else m.innerHTML=`<span class="okc">✓ ${r.stops.length} Locations erkannt${r.stops.some(s=>s.letter&&s.mission)?`, Lösungswort „${esc(r.stops.filter(s=>s.mission&&s.letter).map(s=>s.letter).join(""))}“`:""}.</span>`;
-  m.innerHTML+=r.warnings.map(w=>`<span class="muted">! ${esc(w)}</span>`).join("");
-}
-function renderList(){
-  $("#routeList").innerHTML=STOPS.map((s,i)=>`<li><span class="num">${i+1}</span><span class="nm">${esc(s.name)}<small>${i===0?"Treffpunkt":"Antwort: "+esc(s.answers[0]||"")}${s.mission?"":" · keine Mission"}</small></span><span class="lt">${s.mission?esc(s.letter):""}</span></li>`).join("");
-}
-function openEditor(){ $("#editor").hidden=false; $("#csv").value=routeCSV; $("#msgs").innerHTML=""; renderList(); $("#editor").scrollIntoView({behavior:"smooth"}); }
-$("#editBtn").onclick=openEditor;
-$("#closeEditor").onclick=()=>{$("#editor").hidden=true;};
-$("#checkBtn").onclick=()=>showMsgs(buildRoute($("#csv").value));
-$("#applyBtn").onclick=()=>{ const v=$("#csv").value, r=buildRoute(v); showMsgs(r); if(r.errors.length) return; pendingCSV=v; $("#applyConfirm").hidden=false; };
-$("#applyNo").onclick=()=>{$("#applyConfirm").hidden=true;pendingCSV=null;};
-$("#applyYes").onclick=()=>{ if(pendingCSV===null) return;
-  setRoute(pendingCSV,"custom"); store(ROUTE_KEY,pendingCSV); pendingCSV=null; state=fresh(); save();
-  $("#applyConfirm").hidden=true; $("#msgs").innerHTML=`<span class="okc">✓ Route übernommen. Das Spiel startet neu.</span>`; renderList(); render(); };
-$("#defaultBtn").onclick=()=>{ $("#csv").value=DEFAULT_CSV; showMsgs(buildRoute(DEFAULT_CSV)); };
-$("#copyBtn").onclick=()=>{ const v=$("#csv").value;
-  const fallback=()=>{const t=$("#csv");t.focus();t.select();$("#msgs").innerHTML=`<span class="muted">Text markiert. Jetzt mit Strg+C bzw. „Kopieren“ übernehmen.</span>`;};
-  try{ navigator.clipboard.writeText(v).then(()=>{$("#msgs").innerHTML=`<span class="okc">✓ CSV kopiert.</span>`;},fallback);}catch(e){fallback();} };
-function readFile(f){ if(!f) return; const r=new FileReader();
-  r.onload=()=>{ let t=r.result; if(t.includes(String.fromCharCode(0xFFFD))){ const r2=new FileReader(); r2.onload=()=>{ $("#csv").value=r2.result; showMsgs(buildRoute(r2.result)); }; r2.readAsText(f,"windows-1252"); return; }
-    $("#csv").value=t; showMsgs(buildRoute(t)); };
-  r.readAsText(f,"utf-8"); }
-$("#file").onchange=e=>readFile(e.target.files[0]);
-const drop=$("#drop");
-["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
-["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
-drop.addEventListener("drop",e=>readFile(e.dataTransfer.files[0]));
-
 /* ---------- reset ---------- */
 $("#resetBtn").onclick=()=>{$("#resetConfirm").hidden=false;$("#resetBtn").hidden=true;};
 $("#resetNo").onclick=()=>{$("#resetConfirm").hidden=true;$("#resetBtn").hidden=false;};
-$("#resetYes").onclick=()=>{state=fresh();save();$("#resetConfirm").hidden=true;$("#resetBtn").hidden=false;render();};
+$("#resetYes").onclick=()=>{ if(!ROUTE) return; state=fresh();save();$("#resetConfirm").hidden=true;$("#resetBtn").hidden=false;render();};
 
-/* ---------- start: own route on this device > route.csv next to the page > built-in ---------- */
-setRoute(DEFAULT_CSV,"default");
-const saved=read(ROUTE_KEY);
-async function boot(){
-  if(saved&&setRoute(saved,"custom")){ loadState(); render(); return; }
+/* ---------- start ---------- */
+(async()=>{
+  try{ const r=await fetch("route.json",{cache:"no-store"}); if(!r.ok) throw 0; ROUTE=await r.json(); }
+  catch(e){ $("#screen").innerHTML=`<div class="card"><h2>Route nicht gefunden</h2><p class="muted">Die Datei route.json fehlt neben dieser Seite. Bitte bei der Spielleitung melden.</p></div>`; return; }
+  if(ROUTE.title){ $("#title").textContent=ROUTE.title; document.title=ROUTE.title; }
   loadState(); render();
-  try{ const res=await fetch("route.csv",{cache:"no-store"});
-    if(res.ok){ const t=await res.text(); if(t.trim()!==routeCSV.trim()&&setRoute(t,"file")){ loadState(); render(); } } }catch(e){}
-}
-boot();
+})();
 </script>
+</body>
+</html>
