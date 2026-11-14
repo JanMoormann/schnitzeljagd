@@ -127,6 +127,8 @@ body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .leaflet-control-attribution{background:rgba(23,20,43,.8)!important;color:var(--muted)!important}
 .leaflet-control-attribution a{color:var(--muted)!important}
 .leaflet-bar a{background:var(--panel)!important;color:var(--fg)!important;border-color:var(--line)!important}
+.track span.skip{background:repeating-linear-gradient(90deg,var(--line) 0 4px,transparent 4px 7px)}
+.skipbox{display:flex;flex-direction:column;gap:8px;align-items:stretch}
 </style>
 </head>
 <body>
@@ -263,7 +265,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let ROUTE=null, state=null;
 const N=()=>ROUTE.stops.length;
-const fresh=()=>({salt:ROUTE.salt,stage:0,phase:"intro",hints:0,unlocked:{},got:[],popped:-1});
+const fresh=()=>({salt:ROUTE.salt,stage:0,phase:"intro",hints:0,unlocked:{},got:[],popped:-1,skipped:{}});
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
 function loadState(){let s=null;try{s=JSON.parse(localStorage.getItem(KEY))}catch(e){}
   state=(s&&s.salt===ROUTE.salt&&s.stage<N())?s:fresh();}
@@ -272,7 +274,7 @@ const stopAt=i=>i===0?ROUTE.stops[0].start:state.unlocked[i];
 function renderChrome(){
   const t=$("#track"); t.innerHTML="";
   for(let i=0;i<N();i++){const sp=document.createElement("span");
-    if(i<state.stage||state.phase==="final") sp.className="done"; else if(i===state.stage) sp.className="now"; t.appendChild(sp);}
+    if(state.skipped&&state.skipped[i]) sp.className="skip"; else if(i<state.stage||state.phase==="final") sp.className="done"; else if(i===state.stage) sp.className="now"; t.appendChild(sp);}
   const tray=$("#tray"); tray.innerHTML="";
   for(let i=0;i<ROUTE.letters;i++){const d=document.createElement("div"),g=state.got[i];
     d.className="tile"+(g?" got":"")+(i===state.popped?" pop":""); d.textContent=g||"?"; d.setAttribute("aria-label",g||"noch offen"); tray.appendChild(d);}
@@ -312,7 +314,7 @@ function render(){
       <h2>${state.got.length?"Das Lösungswort":"Geschafft!"}</h2>
       ${state.got.length?`<div class="final-word">${state.got.map(c=>`<div class="tile got">${esc(c)}</div>`).join("")}</div>`:""}
       <p>${state.got.length?"Nennt das Wort am Tisch. ":""}Alles Gute zum Geburtstag! Ab jetzt ist die Nacht frei, die Club-Karte unten rechts zeigt euch alle Clubs.</p>
-      ${s.info?`<p class="note">${esc(s.info)}</p>`:""}</div>`;
+      ${s&&s.info?`<p class="note">${esc(s.info)}</p>`:""}</div>`;
   }
 }
 
@@ -329,6 +331,7 @@ function renderRiddle(n){
     </form>
     <div class="feedback" id="fb" role="status"></div>
     ${state.hints<e.hints.length?`<div class="row"><button class="secondary" id="hintBtn" type="button">Hinweis nehmen</button></div>`:""}
+    ${skipHtml(n)}
     <p class="note">Die richtige Antwort entschlüsselt die Koordinaten. Raten über die Lösung gibt es nicht, fragt notfalls die Spielleitung.</p></div>`;
   $("#f").onsubmit=async ev=>{ev.preventDefault();
     const v=$("#ans").value; if(!v.trim()) return;
@@ -341,7 +344,30 @@ function renderRiddle(n){
       const inp=$("#ans"); inp.classList.remove("shake"); void inp.offsetWidth; inp.classList.add("shake"); }
   };
   const hb=$("#hintBtn"); if(hb) hb.onclick=()=>{state.hints++;save();renderRiddle(n);};
+  wireSkip(()=>skipFrom(n));
 }
+
+
+/* ---------- Bar überspringen ---------- */
+function prevUnlocked(i){ for(let k=i-1;k>=0;k--){ const s=stopAt(k); if(s) return s; } return null; }
+function skipHtml(n){
+  const last=n===N()-1;
+  return `<div class="skipbox"><button class="ghost" id="skipBtn" type="button">${last?"Letzte Station überspringen":"Diese Bar überspringen"}</button>
+    <div class="confirm" id="skipConfirm" hidden><p>${last?"Die letzte Station auslassen und das Spiel beenden?":"Diese Bar auslassen? Ihr bekommt direkt das Rätsel für die nächste Station."}</p>
+    <div class="row"><button class="secondary small" id="skipYes" type="button">Ja, überspringen</button><button class="ghost" id="skipNo" type="button">Abbrechen</button></div></div></div>`;
+}
+function wireSkip(fn){ const b=$("#skipBtn"); if(!b) return;
+  b.onclick=()=>{$("#skipConfirm").hidden=false;b.hidden=true;};
+  $("#skipNo").onclick=()=>{$("#skipConfirm").hidden=true;b.hidden=false;};
+  $("#skipYes").onclick=fn; }
+function goRiddleOrEnd(n){ // n = skipped station
+  state.skipped=state.skipped||{}; state.skipped[n]=true; state.hints=0;
+  if(n>=N()-1){ state.stage=N()-1; state.phase="final"; }
+  else { state.stage=n; state.phase="riddle"; }
+  save(); render(); window.scrollTo({top:0,behavior:"smooth"});
+}
+function skipNav(i){ stopGeo(); goRiddleOrEnd(i); }      // heading to bar i, skip it
+function skipFrom(n){ goRiddleOrEnd(n); }                // riddle would unlock bar n, skip it
 
 /* ---------- Navigation ---------- */
 let geoWatch=null, heading=null, orientOn=false;
@@ -357,7 +383,7 @@ const dirName=b=>DIRS[Math.round(b/45)%8];
 const fmtDist=m=>m<1000?Math.round(m/10)*10+" m":(m/1000).toFixed(1).replace(".",",")+" km";
 
 function renderNav(i,s){
-  const prev=i>0?stopAt(i-1):null;
+  const prev=prevUnlocked(i);
   const maps=`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=${s.travel}`;
   const fb=prev?bearing(prev.lat,prev.lng,s.lat,s.lng):null, fd=prev?distance(prev.lat,prev.lng,s.lat,s.lng):null;
   $("#screen").innerHTML=`<div class="card">
@@ -378,10 +404,12 @@ function renderNav(i,s){
       <button class="secondary" id="gpsBtn" type="button">GPS-Peilung starten</button>
       <a class="btn secondary" href="${maps}" target="_blank" rel="noopener">${s.travel==="transit"?"Öffi-Route":"Fußweg"} in Maps</a>
     </div>
-    <button class="primary full" id="arrived" type="button">Wir sind da</button></div>`;
+    <button class="primary full" id="arrived" type="button">Wir sind da</button>
+    ${i>0?skipHtml(i):""}</div>`;
   if(fb!==null) setNeedle(fb);
   $("#gpsBtn").onclick=()=>startGeo(s);
   $("#arrived").onclick=arrive;
+  wireSkip(()=>skipNav(i));
 }
 function setNeedle(b){const n=$("#needle"); if(!n) return; n.dataset.b=b; n.style.transform=`rotate(${heading!==null?b-heading:b}deg)`;}
 function arrive(){ stopGeo(); state.phase="found"; save(); render(); window.scrollTo({top:0,behavior:"smooth"}); }
