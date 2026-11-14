@@ -202,7 +202,7 @@ function stopsFromCSV(text){
     if(!(s.lat>=-90&&s.lat<=90)||!(s.lng>=-180&&s.lng<=180)) errors.push(`Zeile ${z} (${s.name||"?"}): Koordinaten fehlen oder sind ungültig.`);
     if(i>0&&!s.riddle) errors.push(`Zeile ${z} (${s.name}): Rätsel fehlt. Ohne Rätsel lässt sich der Cache nicht freischalten.`);
     if(i>0&&s.riddle&&!s.answers.length) errors.push(`Zeile ${z} (${s.name}): Antworten fehlen.`);
-    if(s.mission&&!s.letter) warnings.push(`Zeile ${z} (${s.name}): Mission ohne Buchstaben, sie zählt nicht zum Lösungswort.`);
+    
     if(i>0&&s.answers.some(a=>normText(a).length&&normText(s.name).includes(normAnswer(a))&&normAnswer(a).length>3))
       warnings.push(`Zeile ${z}: Eine Antwort steckt im Namen der Bar und könnte sie verraten.`);
     return s;
@@ -237,7 +237,7 @@ function render(){
   if(state.phase==="intro"){
     el.innerHTML=`<div class="card">
       <span class="tag amber">Briefing</span>
-      <h2>${N()} Caches${ROUTE.letters?`, ${ROUTE.letters} Buchstaben`:""}, ein Ziel.</h2>
+      <h2>${N()} Stationen${ROUTE.letters?`, ${ROUTE.letters} Buchstaben`:""}, ein langer Abend.</h2>
       <p>An jedem Cache wartet eine Mission${ROUTE.letters?" und dafür ein Buchstabe":""}. Danach schaltet ein Rätsel die Koordinaten des nächsten Caches frei. Wohin es geht, erfahrt ihr erst, wenn ihr dort steht.</p>
       ${ROUTE.letters?`<p>Wer am Ende das ganze Lösungswort hat, nennt es am Ziel.</p>`:""}
       <p class="note">Treffpunkt: ${esc(s.name)}${s.area?", "+esc(s.area):""}. Ein Handy pro Team führt das Spiel, der Fortschritt bleibt auf diesem Gerät.</p>
