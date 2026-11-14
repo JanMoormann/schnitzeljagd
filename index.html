@@ -288,7 +288,7 @@ function render(){
     el.innerHTML=`<div class="card">
       <span class="tag amber">Briefing</span>
       <h2>Schnitzel, Bars, dann die Clubs.</h2>
-      <p>An jedem Cache wartet eine Mission${ROUTE.letters?" und dafür ein Buchstabe":""}. Danach schaltet ein Rätsel die Koordinaten des nächsten Caches frei. Wohin es geht, erfahrt ihr erst, wenn ihr dort steht.</p>
+      <p>An jeder Station schaltet ein Rätsel die Koordinaten der nächsten Station frei. Wohin es geht, erfahrt ihr erst, wenn ihr dort steht.</p>
       ${ROUTE.letters?`<p>Wer am Ende das ganze Lösungswort hat, nennt es am Ziel.</p>`:""}
       <p class="note">Treffpunkt: ${esc(s.name)}${s.area?", "+esc(s.area):""}. Ein Handy pro Team führt das Spiel, der Fortschritt bleibt auf diesem Gerät.</p>
       <button class="primary full" id="go" type="button">Zum Treffpunkt</button></div>`;
