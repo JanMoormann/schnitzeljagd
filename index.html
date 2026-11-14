@@ -404,6 +404,8 @@ function renderNav(i,s){
       <button class="secondary" id="gpsBtn" type="button">GPS-Peilung starten</button>
       <a class="btn secondary" href="${maps}" target="_blank" rel="noopener">${s.travel==="transit"?"Öffi-Route":"Fußweg"} in Maps</a>
     </div>
+    <button class="secondary" id="compassBtn" type="button" hidden>Kompass einschalten</button>
+    <div class="hint" id="geoHelp" hidden></div>
     <button class="primary full" id="arrived" type="button">Wir sind da</button>
     ${i>0?skipHtml(i):""}</div>`;
   if(fb!==null) setNeedle(fb);
@@ -414,7 +416,7 @@ function renderNav(i,s){
 function setNeedle(b){const n=$("#needle"); if(!n) return; n.dataset.b=b; n.style.transform=`rotate(${heading!==null?b-heading:b}deg)`;}
 function arrive(){ stopGeo(); state.phase="found"; save(); render(); window.scrollTo({top:0,behavior:"smooth"}); }
 function startGeo(s){
-  const st=$("#geoStatus"); enableCompass();
+  const st=$("#geoStatus");
   if(!("geolocation" in navigator)){st.textContent="Kein GPS im Browser. Nutzt den Maps-Link.";return;}
   st.textContent="Suche Standort …"; stopGeo();
   geoWatch=navigator.geolocation.watchPosition(p=>{
@@ -422,8 +424,27 @@ function startGeo(s){
     $("#dist").textContent=fmtDist(d); setNeedle(b);
     st.textContent=d<60?"Ihr seid fast da! Schaut euch um.":`Richtung ${dirName(b)}${heading===null?" (Norden ist oben)":""}. Genauigkeit ±${Math.round(c.accuracy)} m.`;
     if(d<40){ st.textContent="Cache gefunden!"; stopGeo(); setTimeout(arrive,1200); }
-  },err=>{ st.textContent=err.code===1?"Standort wurde nicht freigegeben. Nutzt den Maps-Link oder erlaubt den Standort in den Browser-Einstellungen.":"Kein GPS-Signal. Nutzt den Maps-Link."; },
-  {enableHighAccuracy:true,maximumAge:5000,timeout:20000});
+    showCompassBtn();
+  },err=>{ if(err.code===3){ st.textContent="Warte auf GPS-Signal …"; return; }
+    st.textContent=err.code===1?"Standort blockiert.":"Kein GPS-Signal. Nutzt den Maps-Link."; if(err.code===1) showGeoHelp(); },
+  {enableHighAccuracy:true,maximumAge:5000,timeout:30000});
+}
+const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+function showGeoHelp(){
+  const box=$("#geoHelp"); if(!box) return;
+  box.innerHTML=isIOS?`<strong>So erlaubt ihr den Standort auf dem iPhone:</strong>
+    <ol class="steps"><li>Einstellungen → Datenschutz & Sicherheit → Ortungsdienste: eingeschaltet.</li>
+    <li>Darunter „Safari-Websites“ (bzw. „Chrome“) auf „Beim Verwenden der App“ und „Genauer Standort“ an.</li>
+    <li>In Safari links in der Adressleiste auf „aA“ → Website-Einstellungen → Standort → „Erlauben“.</li>
+    <li>Wurde der Link in WhatsApp oder Instagram geöffnet: oben auf „In Safari öffnen“ tippen.</li>
+    <li>Seite neu laden und erneut „GPS-Peilung starten“ tippen.</li></ol>`
+    :`<strong>Standort erlauben:</strong> Tippt links in der Adressleiste auf das Schloss → Berechtigungen → Standort → Erlauben. Dann Seite neu laden.`;
+  box.hidden=false;
+}
+function showCompassBtn(){
+  const b=$("#compassBtn"); if(!b||orientOn) return;
+  if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function"){ b.hidden=false; b.onclick=()=>{enableCompass();b.hidden=true;}; }
+  else enableCompass();
 }
 function onOrient(e){ let h=null;
   if(typeof e.webkitCompassHeading==="number") h=e.webkitCompassHeading; else if(e.absolute&&typeof e.alpha==="number") h=(360-e.alpha)%360;
@@ -497,7 +518,7 @@ $("#locBtn").onclick=()=>{
     if(!meMarker) meMarker=L.marker(ll,{icon:L.divIcon({className:"",html:'<div class="me"></div>',iconSize:[16,16],iconAnchor:[8,8]}),zIndexOffset:2000}).addTo(map);
     else meMarker.setLatLng(ll);
     if(first){map.setView(ll,16);first=false;} msg.textContent="";
-  },err=>{msg.textContent=err.code===1?"Standort nicht freigegeben.":"Kein GPS-Signal.";},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});
+  },err=>{ if(err.code===3){msg.textContent="Warte auf GPS-Signal …";return;} msg.textContent=err.code===1?(isIOS?"Standort blockiert: Einstellungen → Datenschutz → Ortungsdienste → Safari-Websites → „Beim Verwenden“.":"Standort blockiert. In den Browser-Einstellungen erlauben."):"Kein GPS-Signal.";},{enableHighAccuracy:true,maximumAge:5000,timeout:30000});
 };
 
 /* ---------- reset ---------- */
