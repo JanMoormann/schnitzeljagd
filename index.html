@@ -7,6 +7,7 @@
 <title>Schnitzeljagd durch den Kessel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 [hidden]{display:none!important}
@@ -98,6 +99,33 @@ button:focus-visible,.btn:focus-visible,label.btn:focus-within{outline:3px solid
 footer{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;align-items:center}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
+
+.fab{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:900;
+  background:var(--pink);color:#2a0016;border-radius:999px;padding:14px 20px;box-shadow:0 8px 24px rgba(0,0,0,.45);font-weight:700}
+body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+.mapov{position:fixed;inset:0;z-index:1000;background:var(--bg);display:flex;flex-direction:column}
+.mapbar{display:flex;align-items:center;gap:10px;justify-content:space-between;
+  padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line)}
+.mapbar .t{display:flex;flex-direction:column;min-width:0}
+.mapbar .t b{font-family:var(--f-display);font-size:19px;line-height:1.1}
+.mapbar .t small{color:var(--muted);font-size:13px}
+#map{flex:1;min-height:0;background:#0e0c1c}
+.mapfoot{padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted)}
+.mapfoot .lg{display:inline-flex;align-items:center;gap:6px}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block;border:2px solid #fff}
+.pin{width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5);display:grid;place-items:center}
+.pin span{transform:rotate(45deg);font:700 11px/1 var(--f-body);color:#1b1030}
+.pin.club{background:var(--amber)} .pin.food{background:var(--ok)} .pin.cache{background:var(--pink)}
+.me{width:16px;height:16px;border-radius:50%;background:#4da3ff;border:3px solid #fff;box-shadow:0 0 0 6px rgba(77,163,255,.25)}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--panel);color:var(--fg);border:1px solid var(--line)}
+.leaflet-popup-content{margin:12px 14px;font:14px/1.45 var(--f-body)}
+.leaflet-popup-content b{font-family:var(--f-display);font-size:17px}
+.leaflet-popup-content a{color:var(--amber)}
+.leaflet-container a.leaflet-popup-close-button{color:var(--muted)}
+.leaflet-control-attribution{background:rgba(23,20,43,.8)!important;color:var(--muted)!important}
+.leaflet-control-attribution a{color:var(--muted)!important}
+.leaflet-bar a{background:var(--panel)!important;color:var(--fg)!important;border-color:var(--line)!important}
 </style>
 </head>
 <body>
@@ -117,6 +145,25 @@ footer{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;align-items:ce
     </span>
   </footer>
 </div>
+<button class="fab" id="mapBtn" type="button" aria-haspopup="dialog">Club-Karte</button>
+<div class="mapov" id="mapOv" role="dialog" aria-modal="true" aria-label="Karte der Langen Nacht der Clubs" hidden>
+  <div class="mapbar">
+    <div class="t"><b>Lange Nacht der Clubs</b><small>Sa 14.11. · ein Bändchen für alle 16 Clubs · After-Hour ab 6 Uhr im Proton</small></div>
+    <div class="row" style="flex-wrap:nowrap">
+      <button class="secondary small" id="locBtn" type="button">Wo bin ich?</button>
+      <button class="primary small" id="mapClose" type="button">Schließen</button>
+    </div>
+  </div>
+  <div id="map"></div>
+  <div class="mapfoot">
+    <span class="lg"><span class="dot" style="background:var(--amber)"></span>Club</span>
+    <span class="lg"><span class="dot" style="background:var(--ok)"></span>Snack</span>
+    <span class="lg"><span class="dot" style="background:var(--pink)"></span>Euer nächster Cache</span>
+    <span class="lg"><span class="dot" style="background:#4da3ff"></span>Ihr</span>
+    <span id="locMsg"></span>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 /* ---------- shared: answer normalisation + route crypto ---------- */
 const ARTICLES=/^(der|die|das|den|dem|ein|eine|einen|einem|mein|meine|dein|deine|unser|unsere|the|a|an)\s+/i;
@@ -356,6 +403,73 @@ function enableCompass(){ if(orientOn) return; orientOn=true;
   try{ if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function")
       DeviceOrientationEvent.requestPermission().then(r=>{if(r==="granted") addEventListener("deviceorientation",onOrient);}).catch(()=>{});
     else{ addEventListener("deviceorientationabsolute",onOrient); addEventListener("deviceorientation",onOrient); } }catch(e){} }
+
+
+/* ---------- Club-Karte ---------- */
+const CLUBS=[
+ ["Proton","Königstraße 49",48.7736694,9.1751693,"club"],
+ ["Nobby Bar","Königstraße 49",48.7737400,9.1753400,"club"],
+ ["Anderthalb Bar","Königstraße 47",48.7739036,9.1749261,"club"],
+ ["Club Schocken","Hirschstraße 36",48.7736597,9.1754309,"club"],
+ ["Boa","Tübinger Straße 12–16",48.772644,9.174127,"club"],
+ ["Hi Life","Rotebühlplatz 11",48.7741,9.17278,"club"],
+ ["Havanna the Club","Marienstraße 3B",48.7730574,9.1731112,"club"],
+ ["Havanna Bar","Paulinenstraße 49",48.7732293,9.1694899,"club"],
+ ["Romy S.","Lange Straße 7",48.775534,9.174141,"club"],
+ ["Climax Institutes","Calwer Straße 25",48.776084,9.1740091,"club"],
+ ["Barbee Club","Theodor-Heuss-Straße 24",48.7763109,9.1724751,"club"],
+ ["Comodo Studios","Eichstraße 6",48.7740279,9.1783521,"club"],
+ ["Cavos","Lautenschlagerstraße 20",48.7817516,9.1781485,"club"],
+ ["Wonders","Friedrichstraße 13",48.7822111,9.1776341,"club"],
+ ["Kowalski","Kriegsbergstraße 28",48.7847701,9.1786482,"club"],
+ ["The Park","Stresemannstraße 39",48.8051977,9.1744824,"club"],
+ ["doen doen kebap","Josef-Hirn-Platz 8 · vegan, Fr/Sa bis 4 Uhr",48.7729042,9.177621,"food"]
+];
+let map=null, meMarker=null, cacheMarker=null, mapWatch=null;
+const pinIcon=(cls,txt)=>L.divIcon({className:"",html:`<div class="pin ${cls}"><span>${txt}</span></div>`,iconSize:[26,26],iconAnchor:[3,26],popupAnchor:[10,-24]});
+function initMap(){
+  if(map||typeof L==="undefined") return !!map;
+  map=L.map("map",{zoomControl:true,attributionControl:true}).setView([48.7765,9.1755],15);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:19,subdomains:"abcd",
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'}).addTo(map);
+  CLUBS.forEach(([n,a,lat,lng,t],k)=>{
+    const g=`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`;
+    L.marker([lat,lng],{icon:pinIcon(t,t==="food"?"🌯":k+1),title:n}).addTo(map)
+      .bindPopup(`<b>${esc(n)}</b><br>${esc(a)}<br><a href="${g}" target="_blank" rel="noopener">Fußweg in Maps</a>`);
+  });
+  return true;
+}
+function updateCacheMarker(){
+  if(!map) return;
+  if(cacheMarker){map.removeLayer(cacheMarker);cacheMarker=null;}
+  if(!ROUTE||!state||state.phase!=="nav") return;
+  const s=stopAt(state.stage); if(!s) return;
+  const label=state.stage===0?esc(s.name):"Cache "+(state.stage+1);
+  cacheMarker=L.marker([s.lat,s.lng],{icon:pinIcon("cache","★"),zIndexOffset:1000}).addTo(map).bindPopup(`<b>${label}</b><br>Euer nächstes Ziel`);
+}
+function openMap(){
+  const ov=$("#mapOv"); ov.hidden=false; document.body.style.overflow="hidden";
+  if(!initMap()){ $("#map").innerHTML=`<div class="card" style="margin:16px"><p>Die Karte konnte nicht geladen werden. Prüft die Internetverbindung und öffnet sie nochmal.</p></div>`; return; }
+  setTimeout(()=>map.invalidateSize(),50); updateCacheMarker(); $("#mapClose").focus();
+}
+function closeMap(){ $("#mapOv").hidden=true; document.body.style.overflow="";
+  if(mapWatch!==null&&navigator.geolocation){navigator.geolocation.clearWatch(mapWatch);mapWatch=null;} $("#mapBtn").focus(); }
+$("#mapBtn").onclick=openMap;
+$("#mapClose").onclick=closeMap;
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("#mapOv").hidden) closeMap(); });
+$("#locBtn").onclick=()=>{
+  const msg=$("#locMsg");
+  if(!map) return;
+  if(!("geolocation" in navigator)){msg.textContent="Kein GPS im Browser.";return;}
+  msg.textContent="Suche Standort …"; let first=true;
+  if(mapWatch!==null) navigator.geolocation.clearWatch(mapWatch);
+  mapWatch=navigator.geolocation.watchPosition(p=>{
+    const ll=[p.coords.latitude,p.coords.longitude];
+    if(!meMarker) meMarker=L.marker(ll,{icon:L.divIcon({className:"",html:'<div class="me"></div>',iconSize:[16,16],iconAnchor:[8,8]}),zIndexOffset:2000}).addTo(map);
+    else meMarker.setLatLng(ll);
+    if(first){map.setView(ll,16);first=false;} msg.textContent="";
+  },err=>{msg.textContent=err.code===1?"Standort nicht freigegeben.":"Kein GPS-Signal.";},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});
+};
 
 /* ---------- reset ---------- */
 $("#resetBtn").onclick=()=>{$("#resetConfirm").hidden=false;$("#resetBtn").hidden=true;};
